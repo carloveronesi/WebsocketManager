@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
@@ -13,6 +15,8 @@ namespace WebsocketManager
 {
 	public class Startup
 	{
+		private Dictionary<Guid, WebSocket> sockets = new Dictionary<Guid, WebSocket>();
+
 		public void ConfigureServices(IServiceCollection services)
 		{
 		}
@@ -41,7 +45,8 @@ namespace WebsocketManager
 					{
 						//Creo il websocket
 						WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync();
-						Console.WriteLine("Socket Connesso");
+						Guid current = AddWebSocket(webSocket);
+						Console.WriteLine("Socket Connesso " + current.ToString());
 
 						//Aspetto che mi mandino un messaggio
 						await Echo(context, webSocket);
@@ -77,7 +82,37 @@ namespace WebsocketManager
 			}
 			//Chiusura Socket
 			await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription, CancellationToken.None);
-			Console.WriteLine("Socket Disconnesso ");
+			
+			//Todo: rimuovi da dict
+
+			Console.WriteLine("Socket Disconnesso " + getGuid(webSocket).ToString());
+		}
+
+
+		public Guid AddWebSocket(WebSocket socket)
+		{
+			var guid = Guid.NewGuid();
+			sockets.TryAdd(guid, socket);
+			return guid;
+		}
+
+		public Guid getGuid(WebSocket socket)
+		{
+			return KeyByValue(sockets, socket); ;
+		}
+
+		public static Guid KeyByValue(Dictionary<Guid, WebSocket> dict, WebSocket val)
+		{
+			Guid key = new Guid();
+			foreach (KeyValuePair<Guid, WebSocket>  pair in dict)
+			{
+				if (pair.Value == val)
+				{
+					key = pair.Key;
+					break;
+				}
+			}
+			return key;
 		}
 
 	}
