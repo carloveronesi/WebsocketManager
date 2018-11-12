@@ -10,6 +10,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
+/*
+ * https://docs.microsoft.com/it-it/aspnet/core/fundamentals/websockets?view=aspnetcore-2.1
+ * 
+ */
 namespace WebsocketManager
 {
 	public class Startup
@@ -49,7 +53,7 @@ namespace WebsocketManager
 						Console.WriteLine("[{0}] Connected.", current.ToString());
 
 						//Waiting for a message
-						await Echo(context, webSocket);
+						await Update(context, webSocket);
 					}
 					else
 					{//Otherwise error message
@@ -67,19 +71,29 @@ namespace WebsocketManager
 		/// <summary>
 		/// Repeating the packet received from the client
 		/// </summary>
-		private async Task Echo(HttpContext context, WebSocket webSocket)
+		private async Task Update(HttpContext context, WebSocket webSocket)
 		{
 			var buffer = new byte[1024 * 4];
 			//Receiving the first packet
 			WebSocketReceiveResult result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
 			while (!result.CloseStatus.HasValue)
 			{
-				//Sending back to the client
-				await webSocket.SendAsync(new ArraySegment<byte>(buffer, 0, result.Count), result.MessageType, result.EndOfMessage, CancellationToken.None);
+				//Getting websocket GUID
+				Guid guid = getGuid(webSocket);
 
 				//Printing data on the console
 				string data = Encoding.UTF8.GetString(buffer).TrimEnd('\0'); //https://stackoverflow.com/questions/1003275/how-to-convert-utf-8-byte-to-string#comment51241174_1003289
-				Console.WriteLine("[{0}] Message: {1}", getGuid(webSocket), data);
+				Console.WriteLine("[{0}] Message: {1}", guid, data);
+
+				//Sending "OK" to the client
+				Console.WriteLine("Sending ok to " + guid);
+				String response = "ok";
+				var encoded = Encoding.UTF8.GetBytes(response);
+				var buffer2 = new ArraySegment<Byte>(encoded, 0, encoded.Length);
+				await webSocket.SendAsync(buffer2, WebSocketMessageType.Text, true, CancellationToken.None);
+
+				//Sending back to the client
+				//await webSocket.SendAsync(new ArraySegment<byte>(buffer, 0, result.Count), result.MessageType, result.EndOfMessage, CancellationToken.None);
 
 				//Receiving the next packet
 				result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
