@@ -44,6 +44,7 @@ namespace WebsocketManager
 					{
 						//Creating a websocket
 						WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync();
+						//Adding to
 						Guid current = AddWebSocket(webSocket);
 						Console.WriteLine("Socket Connesso " + current.ToString());
 
@@ -69,14 +70,18 @@ namespace WebsocketManager
 		private async Task Echo(HttpContext context, WebSocket webSocket)
 		{
 			var buffer = new byte[1024 * 4];
+			//Receiving the first packet
 			WebSocketReceiveResult result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
 			while (!result.CloseStatus.HasValue)
 			{
+				//Sending back to the client
 				await webSocket.SendAsync(new ArraySegment<byte>(buffer, 0, result.Count), result.MessageType, result.EndOfMessage, CancellationToken.None);
 
+				//Printing data on the console
 				string data = Encoding.UTF8.GetString(buffer).TrimEnd('\0'); //https://stackoverflow.com/questions/1003275/how-to-convert-utf-8-byte-to-string#comment51241174_1003289
 				Console.WriteLine("Messaggio ricevuto: " + data + ".");
 
+				//Receiving the next packet
 				result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
 			}
 			//Closing Socket
