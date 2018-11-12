@@ -14,7 +14,7 @@ namespace WebsocketManager
 {
 	public class Startup
 	{
-		private Dictionary<Guid, WebSocket> sockets = new Dictionary<Guid, WebSocket>();
+		private static Dictionary<Guid, WebSocket> sockets = new Dictionary<Guid, WebSocket>();
 
 		public void ConfigureServices(IServiceCollection services)
 		{
@@ -46,7 +46,7 @@ namespace WebsocketManager
 						WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync();
 						//Adding to
 						Guid current = AddWebSocket(webSocket);
-						Console.WriteLine("Socket Connesso " + current.ToString());
+						Console.WriteLine("[{0}] Connected.", current.ToString());
 
 						//Waiting for a message
 						await Echo(context, webSocket);
@@ -79,17 +79,19 @@ namespace WebsocketManager
 
 				//Printing data on the console
 				string data = Encoding.UTF8.GetString(buffer).TrimEnd('\0'); //https://stackoverflow.com/questions/1003275/how-to-convert-utf-8-byte-to-string#comment51241174_1003289
-				Console.WriteLine("Messaggio ricevuto: " + data + ".");
+				Console.WriteLine("[{0}] Message: {1}", getGuid(webSocket), data);
 
 				//Receiving the next packet
 				result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
 			}
 			//Closing Socket
 			await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription, CancellationToken.None);
-			
-			//Todo: rimuovi da dict
 
-			Console.WriteLine("Socket Disconnesso " + getGuid(webSocket).ToString());
+			//Removing from dictionary
+			Guid socketToRemove = getGuid(webSocket);
+			RemoveWebSocket(socketToRemove);
+
+			Console.WriteLine("[{0}] Disconnected.", socketToRemove.ToString());
 		}
 
 		/// <summary>
@@ -134,5 +136,14 @@ namespace WebsocketManager
 			return key;
 		}
 
+		/// <summary>
+		/// Remove the socket from the dictionary
+		/// </summary>
+		/// <param name="guid"></param>
+		/// <returns></returns>
+		private static bool RemoveWebSocket(Guid guid)
+		{
+			return sockets.Remove(guid);
+		}
 	}
 }
