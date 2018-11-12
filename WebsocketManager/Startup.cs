@@ -1,15 +1,14 @@
-﻿using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Concurrent;
+﻿using System;
 using System.Collections.Generic;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace WebsocketManager
 {
@@ -23,10 +22,10 @@ namespace WebsocketManager
 
 		public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
 		{
-			//Imposto l'utilizzo di websocket
+			//Setting the use of websockets
 			app.UseWebSockets();
 
-			//Gestisco il caso in cui mi mandino delle opzioni
+			//Managing options given by the client
 			var webSocketOptions = new WebSocketOptions()
 			{
 				KeepAliveInterval = TimeSpan.FromSeconds(120),
@@ -34,25 +33,25 @@ namespace WebsocketManager
 			};
 			app.UseWebSockets(webSocketOptions);
 
-			//Setto il websocket
+			//Setting the websocket
 			app.Use(async (context, next) =>
 			{
-				//Gestisco la pagina "/ws"
+				//Managing "/ws" page
 				if (context.Request.Path == "/ws")
 				{
-					//Se si sta connettendo un websocket...
+					//If a websocket is connecting...
 					if (context.WebSockets.IsWebSocketRequest)
 					{
-						//Creo il websocket
+						//Creating a websocket
 						WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync();
 						Guid current = AddWebSocket(webSocket);
 						Console.WriteLine("Socket Connesso " + current.ToString());
 
-						//Aspetto che mi mandino un messaggio
+						//Waiting for a message
 						await Echo(context, webSocket);
 					}
 					else
-					{//Altrimenti errore
+					{//Otherwise error message
 						context.Response.StatusCode = 400;
 					}
 				}
@@ -65,7 +64,7 @@ namespace WebsocketManager
 		}
 
 		/// <summary>
-		/// Echo
+		/// Repeating the packet received from the client
 		/// </summary>
 		private async Task Echo(HttpContext context, WebSocket webSocket)
 		{
@@ -80,7 +79,7 @@ namespace WebsocketManager
 
 				result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
 			}
-			//Chiusura Socket
+			//Closing Socket
 			await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription, CancellationToken.None);
 			
 			//Todo: rimuovi da dict
@@ -88,7 +87,11 @@ namespace WebsocketManager
 			Console.WriteLine("Socket Disconnesso " + getGuid(webSocket).ToString());
 		}
 
-
+		/// <summary>
+		/// Adding a websocket to the dictionary and generating its GUID
+		/// </summary>
+		/// <param name="socket">WebSocket that we want to add</param>
+		/// <returns>GUID of the added WebSocket</returns>
 		public Guid AddWebSocket(WebSocket socket)
 		{
 			var guid = Guid.NewGuid();
@@ -96,11 +99,22 @@ namespace WebsocketManager
 			return guid;
 		}
 
+		/// <summary>
+		/// Get GUID
+		/// </summary>
+		/// <param name="socket">Socket that we want to identify</param>
+		/// <returns>GUID of the given socket</returns>
 		public Guid getGuid(WebSocket socket)
 		{
 			return KeyByValue(sockets, socket); ;
 		}
 
+		/// <summary>
+		/// Getting GUID by the given value
+		/// </summary>
+		/// <param name="dict">Dictionary containing the GUID of every WebSocket</param>
+		/// <param name="val">WebSocket that we want to identify</param>
+		/// <returns>GUID of the given WebSocket</returns>
 		public static Guid KeyByValue(Dictionary<Guid, WebSocket> dict, WebSocket val)
 		{
 			Guid key = new Guid();
